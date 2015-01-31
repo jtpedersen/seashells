@@ -4,7 +4,10 @@ Playing with "The algorithmic beauty of seashells"
 The book is accompanied with source code and programs, written in
 basic. Although functional the are somewhat arcane, perhaps a some
 quick and dirty projects could be a fun way to see images in a larger
-then 480x320 basic resolution.
+than 480x320 basic resolution.
+
+
+
 
 
 
