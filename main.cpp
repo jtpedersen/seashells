@@ -18,7 +18,7 @@ SDL_Texture                   *tex      = nullptr;
 SDL_Renderer                  *renderer = nullptr;
 SDL_Window                    *win      = nullptr;
 
-RDSys<size> rdSys(1.0, .2, .5, .1, .8, .01, .1);
+RDSys<size> rdSys(.2, .5, .1, .8, .01, .1);
 array<uint32_t, WIDTH*HEIGHT>  img;
 
 static array<uint32_t, 16> colors = {{
@@ -39,9 +39,9 @@ void shuffle_colors() {
 }
 void reset_board() {
     for(auto& c : img) c = colors[0];
-    rdSys = RDSys<size>(1.0,
-			0.015, .1, 1.0,
-			0.02, .014, 0.1);
+    rdSys = RDSys<size>(
+			0.15, .2, .10,
+			.52, .084, .061);
     generation = 0;
 }
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
     while(1) {
         for(int i = 0; i < generations_pr_frame; i++) {
-	    rdSys.tick(static_cast<int>(generation%size));
+	    rdSys.tick(static_cast<int>((generation + i )%size));
         }
         generation += generations_pr_frame;
 
@@ -86,11 +86,11 @@ int main(int argc, char **argv) {
         auto end_time = SDL_GetTicks();
         auto dt = end_time - start_time;
         // limit FPS
-        while (dt < 10) {
-            SDL_Delay(10);
-            end_time = SDL_GetTicks();
-            dt = end_time - start_time;
-        }
+        // while (dt < 10) {
+        //     SDL_Delay(10);
+        //     end_time = SDL_GetTicks();
+        //     dt = end_time - start_time;
+        // }
         fps = fps * .9 + .1 * (1000.0 / dt);
         start_time = end_time;
 
