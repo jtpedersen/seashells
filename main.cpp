@@ -40,8 +40,8 @@ void shuffle_colors() {
 void reset_board() {
     for(auto& c : img) c = colors[0];
     rdSys = RDSys<size>(
-			0.15, .2, .10,
-			.52, .084, .061);
+			0.005, .02, .80,
+			.82, .084, .0061);
     generation = 0;
 }
 

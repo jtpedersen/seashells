@@ -38,6 +38,7 @@ private:
     size_t idx(int x, int y);
     std::array<double, size*size> laplacian(std::array<double, size*size> arr);
     std::array<double, size> d2(std::array<double, size*size> arr, int line);
+    std::array<double, size> d2(const std::array<double, size> arr);
     double diffuse_a;
     double base_a;
     double reduce_a;
@@ -53,23 +54,43 @@ void RDSys<size>::tick(int line) {
     // wrap around
     line %=size;
     auto next = (line+1)%size;
-    auto d2a = d2(a, line);
-    auto d2b = d2(b, line);
     std::array<double, size> da;
     std::array<double, size> db;
-    
+    std::array<double, size> tmp_a;
+    std::array<double, size> tmp_b;
+
     for(int x = 1; x < size-1; x++) {
-	const double ax = a[idx(x, line)];
-	const double bx = b[idx(x, line)];
-	const double axsq = ax*ax;
-	// const double bxsq = bx*bx; 
-	da[x] = s[idx(x, line)] * ( (axsq/bx) + base_a) - reduce_a*ax + diffuse_a * d2a[x];
-	db[x] = s[idx(x, line)] * axsq                  - reduce_b*bx + diffuse_b * d2b[x] + base_b;
+	tmp_a[x] = a[idx(x, line)];
+	tmp_b[x] = b[idx(x, line)];
     }
-    // printf("da=%f, db=%f\n", da[42], db[42]);
+    // fix borders
+    tmp_a[0] = a[idx(1, line)];
+    tmp_b[0] = b[idx(1, line)];
+    tmp_a[size-1] = a[idx(size-2, line)];
+    tmp_b[size-1] = b[idx(size-2, line)];
+
+    for (int i = 0; i < 10; i++) {
+	for(int x = 1; x < size-1; x++) {
+	    auto d2a = d2(tmp_a);
+	    auto d2b = d2(tmp_b);
+	    const double ax = a[idx(x, line)];
+	    const double bx = b[idx(x, line)];
+	    const double axsq = ax*ax;
+	    // const double bxsq = bx*bx; 
+	    da[x] = s[idx(x, line)] * ( (axsq/bx) + base_a) - reduce_a*ax + diffuse_a * d2a[x];
+	    db[x] = s[idx(x, line)] * axsq                  - reduce_b*bx + diffuse_b * d2b[x] + base_b;
+	}
+	// printf("da=%f, db=%f\n", da[42], db[42]);
+	for(int x = 0; x < size; x++) {
+	    tmp_a[x] = tmp_a[x] +  0.1 * da[x];
+	    tmp_b[x] = tmp_b[x] +  0.1 * db[x];
+	}
+    }
+
+    // transfer to newline
     for(int x = 0; x < size; x++) {
-	a[idx(x, next)] = a[idx(x, line)] +  0.01 * da[x];
-	b[idx(x, next)] = b[idx(x, line)] +  0.01 * db[x];
+	a[idx(x, next)] = tmp_a[x];
+	b[idx(x, next)] = tmp_b[x];
     }
 }
 
@@ -82,10 +103,21 @@ template<int size>
 std::array<double, size> RDSys<size>::d2(std::array<double, size*size> arr, int line) {
     std::array<double, size> res;
     for(int x = 1; x < size-1; x++) {
-	res[idx(x, line)] = arr[idx(x-1, line)]
-	    -2 * arr[idx(x, line)]
-	    + arr[idx(x, line)];
-	// res[idx(x, line)] /= h^2 h == 1.0
+	res[x] = arr[idx(x-1, line)]
+	    -2.0 * arr[idx(x, line)]
+	    + arr[idx(x+1, line)];
+    }
+    return res;
+}
+
+template<int size>
+std::array<double, size> RDSys<size>::d2(const std::array<double, size> arr) {
+    std::array<double, size> res;
+//    #pragma omp parallel for
+    for(int x = 1; x < size-1; x++) {
+	res[x] = arr[x-1]
+	    -2.0 * arr[x]
+	    + arr[x+1];
     }
     return res;
 }
