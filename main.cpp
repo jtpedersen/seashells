@@ -40,12 +40,13 @@ void shuffle_colors() {
 void reset_board() {
     for(auto& c : img) c = colors[0];
     rdSys = RDSys<size>(
-			0.005, .02, .80,
+			0.005, .02, .1980,
 			.82, .084, .0061);
     generation = 0;
 }
 
 void render() {
+
     if (A == render_state) {
 	for(int i = 0; i < WIDTH * HEIGHT; i++)
 	    img[i] = GRADIENT(rdSys.a[i]);
@@ -53,7 +54,10 @@ void render() {
 	for(int i = 0; i < WIDTH * HEIGHT; i++)
 	    img[i] = GRADIENT(rdSys.b[i]);
     }
-
+    int prev_line = (generation-1)%HEIGHT;
+    for(int i = 0; i < WIDTH; i++)
+	img[prev_line * WIDTH + i] = colors[15];
+    
     // draw
     SDL_UpdateTexture(tex, NULL, img.data(), WIDTH * sizeof(uint32_t));
     SDL_Rect rect = {0,0, scale * WIDTH, scale * HEIGHT};
@@ -61,6 +65,7 @@ void render() {
 }
 
 int main(int argc, char **argv) {
+
     if (0 != SDL_Init(SDL_INIT_EVERYTHING) ) exit(42);
     SDL_CreateWindowAndRenderer(scale * WIDTH, scale * HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL, &win, &renderer);
     if(nullptr == win || nullptr == renderer) exit(42);

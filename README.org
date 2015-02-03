@@ -6,7 +6,7 @@ basic. Although functional the are somewhat arcane, perhaps a some
 quick and dirty projects could be a fun way to see images in a larger
 than 480x320 basic resolution.
 
-
+[[file:screenshots/inhibitor.png]]
 
 
 
