@@ -20,7 +20,7 @@ public:
 	}
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
-	const double fluc =.1;
+	const double fluc =.01;
 	static std::uniform_real_distribution<> fluctuations(-fluc, fluc);
 
 

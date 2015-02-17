@@ -37,23 +37,52 @@ void shuffle_colors() {
     static mt19937 g(rd());
     shuffle(colors.begin(), colors.end(), g);
 }
+
+template<int N>
+std::array<double, N> calc_lut(std::array<double, size*size> active) {
+    auto cdf(active);
+    std::sort(cdf.begin(), cdf.end());
+
+    double lut_min = cdf.front();
+    assert(lut_min >= 0.0);
+    std::array<double, N> lut;
+    for (int i = 0; i < lut.size(); i++) {
+	auto idx = (i * active.size()) / lut.size();
+	lut[i] = cdf[idx];
+    }
+    return lut;
+}
+std::array<double, 100> lut;
+
+void recalc_lut() {
+    const auto& active = (A == render_state) ? rdSys.a : rdSys.b;
+    lut = calc_lut<lut.size()>(active);
+}
+
+
 void reset_board() {
     for(auto& c : img) c = colors[0];
     rdSys = RDSys<size>(
 			0.005, .02, .1980,
 			.82, .084, .0061);
     generation = 0;
+    for (unsigned int i = 0; i < lut.size(); i++) {
+	lut[i] = i / double(lut.size());
+    }
 }
+
 
 void render() {
 
-    if (A == render_state) {
-	for(int i = 0; i < WIDTH * HEIGHT; i++)
-	    img[i] = GRADIENT(rdSys.a[i]);
-    } else if (B == render_state) {
-	for(int i = 0; i < WIDTH * HEIGHT; i++)
-	    img[i] = GRADIENT(rdSys.b[i]);
+    const auto& active = (A == render_state) ? rdSys.a : rdSys.b;
+
+    double lut_scale = 1.0 / double(lut.size());
+    for(int i = 0; i < WIDTH * HEIGHT; i++) {
+	auto it = std::lower_bound(lut.begin(), lut.end(), active[i]);
+	auto d = std::distance(lut.begin(), it);
+    	img[i] = GRADIENT(d*lut_scale);
     }
+
     int prev_line = (generation-1)%HEIGHT;
     for(int i = 0; i < WIDTH; i++)
 	img[prev_line * WIDTH + i] = colors[15];
@@ -91,11 +120,11 @@ int main(int argc, char **argv) {
         auto end_time = SDL_GetTicks();
         auto dt = end_time - start_time;
         // limit FPS
-        // while (dt < 10) {
-        //     SDL_Delay(10);
-        //     end_time = SDL_GetTicks();
-        //     dt = end_time - start_time;
-        // }
+        while (dt < 10) {
+            SDL_Delay(10);
+            end_time = SDL_GetTicks();
+            dt = end_time - start_time;
+        }
         fps = fps * .9 + .1 * (1000.0 / dt);
         start_time = end_time;
 
@@ -111,6 +140,7 @@ int main(int argc, char **argv) {
 	    if (SDLK_a    == e.key.keysym.sym) render_state = A;
 	    if (SDLK_b    == e.key.keysym.sym) render_state = B;
             if (SDLK_k    == e.key.keysym.sym) {reset_board();}
+	    if (SDLK_r    == e.key.keysym.sym) {recalc_lut();}
 
             generations_pr_frame = max(1, generations_pr_frame);
         }
