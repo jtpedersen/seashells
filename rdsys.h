@@ -15,8 +15,8 @@ public:
 	for(auto& bx : b)
 	    bx = 0.0;
 	for(int x = 0; x < size; x++) {
-	    a[idx(x, 0)] = 1.0; //std::abs( .1 * std::sin(10.0 * x/float(size)));
-	    b[idx(x, 0)] = 1.0; //std::abs( .1 * std::cos(100.0 * x/float(size)));
+	    a[idx(x, 0)] = 1.0;
+	    b[idx(x, 0)] = 1.0;
 	}
 	static std::random_device rd;
 	static std::mt19937 gen(rd());

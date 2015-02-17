@@ -21,18 +21,30 @@ SDL_Window                    *win      = nullptr;
 RDSys<size> rdSys(.2, .5, .1, .8, .01, .1);
 array<uint32_t, WIDTH*HEIGHT>  img;
 
-enum ERenderState {A, B};
+enum ERenderState {A, B, S};
 ERenderState render_state = A;
 unsigned long generation  = 0;
+
+std::array<double, 100> lut;
+
+std::array<double, size * size>& get_active() {
+    switch(render_state) {
+    case A:
+	return rdSys.a;
+    case B:
+	return rdSys.b;
+    case S:
+	return rdSys.s;
+    }
+    return rdSys.a;
+}
 
 template<int N>
 std::array<double, N> calc_lut(std::array<double, size*size> active) {
     auto cdf(active);
     const auto activated = std::min(size * generation, active.size());
     std::sort(cdf.begin(), cdf.begin() + activated);
-
-    double lut_min = cdf.front();
-    assert(lut_min >= 0.0);
+    assert(cdf.front() >= 0.0); // negative concentrations not allowed
     std::array<double, N> lut;
     for (int i = 0; i < lut.size(); i++) {
 	auto idx = (i * activated) / lut.size();
@@ -40,10 +52,8 @@ std::array<double, N> calc_lut(std::array<double, size*size> active) {
     }
     return lut;
 }
-std::array<double, 100> lut;
-
 void recalc_lut() {
-    const auto& active = (A == render_state) ? rdSys.a : rdSys.b;
+    const auto& active = get_active();
     lut = calc_lut<lut.size()>(active);
 }
 
@@ -64,7 +74,6 @@ double lut_up(double v) {
 	assert( w >= 0);
 	double len = *(it +1) - *it;
 	assert(len >= 0);
-	w = std::min(w, len);
 	assert(len >= w);
 	frac = 1.0 - w/len;
 	assert(frac >= 0);
@@ -85,7 +94,11 @@ void reset_board() {
 }
 
 void render() {
-    const auto& active = (A == render_state) ? rdSys.a : rdSys.b;
+
+    if (0 == (generation%30))
+	recalc_lut();
+	    
+    const auto& active = get_active();
 
     for(int i = 0; i < WIDTH * HEIGHT; i++) {
     	img[i] = GRADIENT(lut_up(active[i]));
@@ -100,6 +113,13 @@ void render() {
     SDL_Rect rect = {0,0, scale * WIDTH, scale * HEIGHT};
     SDL_RenderCopy(renderer, tex, NULL, &rect);
 }
+
+void switch_render_state(ERenderState next) {
+    render_state = next;
+    recalc_lut();
+}
+
+
 
 int main(int argc, char **argv) {
 
@@ -144,8 +164,9 @@ int main(int argc, char **argv) {
             if (e.type == SDL_QUIT || SDLK_q == e.key.keysym.sym) exit(0);
             if (SDLK_UP   == e.key.keysym.sym) generations_pr_frame  *= 2;
             if (SDLK_DOWN == e.key.keysym.sym) generations_pr_frame  /= 2;
-	    if (SDLK_a    == e.key.keysym.sym) render_state = A;
-	    if (SDLK_b    == e.key.keysym.sym) render_state = B;
+	    if (SDLK_a    == e.key.keysym.sym) switch_render_state(A);
+	    if (SDLK_b    == e.key.keysym.sym) switch_render_state(B);
+	    if (SDLK_s    == e.key.keysym.sym) switch_render_state(S);
             if (SDLK_k    == e.key.keysym.sym) {reset_board();}
 	    if (SDLK_r    == e.key.keysym.sym) {recalc_lut();}
 
