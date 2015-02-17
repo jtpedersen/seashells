@@ -59,7 +59,6 @@ void recalc_lut() {
     lut = calc_lut<lut.size()>(active);
 }
 
-
 void reset_board() {
     for(auto& c : img) c = colors[0];
     rdSys = RDSys<size>(
@@ -67,20 +66,40 @@ void reset_board() {
 			.82, .084, .0061);
     generation = 0;
     for (unsigned int i = 0; i < lut.size(); i++) {
-	lut[i] = i / double(lut.size());
+	lut[i] = 10 * i / double(lut.size());
     }
 }
 
+double lut_up(double v) {
+    const static double lut_scale = 1.0 / double(lut.size());
+    auto it = std::lower_bound(lut.begin(), lut.end(), v);
+    if (lut.end() == it )
+	return 1.0;
+    if (lut.begin() == it)
+	return 0.0;
+    assert( v <= *it );
+
+    auto d = std::distance(lut.begin(), it);
+    double frac = 0.0;
+    if ( (it+1) != lut.end()) {
+	double w = *it - v ;
+	assert( w >= 0);
+	double len = *(it +1) - *it;
+	assert(len >= 0);
+	w = std::min(w, len);
+	assert(len >= w);
+	frac = 1.0 - w/len;
+	assert(frac >= 0);
+	assert(frac <= 1.0);
+    }
+    return (double(d) + frac ) * lut_scale;
+}
 
 void render() {
-
     const auto& active = (A == render_state) ? rdSys.a : rdSys.b;
 
-    double lut_scale = 1.0 / double(lut.size());
     for(int i = 0; i < WIDTH * HEIGHT; i++) {
-	auto it = std::lower_bound(lut.begin(), lut.end(), active[i]);
-	auto d = std::distance(lut.begin(), it);
-    	img[i] = GRADIENT(d*lut_scale);
+    	img[i] = GRADIENT(lut_up(active[i]));
     }
 
     int prev_line = (generation-1)%HEIGHT;

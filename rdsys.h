@@ -20,12 +20,12 @@ public:
 	}
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
-	const double fluc =.01;
+	const double fluc =.1;
 	static std::uniform_real_distribution<> fluctuations(-fluc, fluc);
 
 
 	for(auto& si: s)
-	    si = reduce_a + fluctuations(gen);
+	    si = std::max(0.0, reduce_a + fluctuations(gen));
 
     }
     void tick(int line);
