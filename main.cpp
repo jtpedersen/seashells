@@ -21,33 +21,21 @@ SDL_Window                    *win      = nullptr;
 RDSys<size> rdSys(.2, .5, .1, .8, .01, .1);
 array<uint32_t, WIDTH*HEIGHT>  img;
 
-static array<uint32_t, 16> colors = {{
-        0x008000, 0x800080, 0x008080, 0x000080,
-        0xC0C0C0, 0x808080, 0x800000, 0x808000,  
-        0x000000, 0xFFFFFF, 0xFF0000, 0x00FF00,
-        0x0000FF, 0xFFFF00, 0x00FFFF, 0xFF00FF,}};
-
 enum ERenderState {A, B};
 ERenderState render_state = A;
 unsigned long generation  = 0;
 
-
-void shuffle_colors() {
-    static random_device rd;
-    static mt19937 g(rd());
-    shuffle(colors.begin(), colors.end(), g);
-}
-
 template<int N>
 std::array<double, N> calc_lut(std::array<double, size*size> active) {
     auto cdf(active);
-    std::sort(cdf.begin(), cdf.end());
+    const auto activated = std::min(size * generation, active.size());
+    std::sort(cdf.begin(), cdf.begin() + activated);
 
     double lut_min = cdf.front();
     assert(lut_min >= 0.0);
     std::array<double, N> lut;
     for (int i = 0; i < lut.size(); i++) {
-	auto idx = (i * active.size()) / lut.size();
+	auto idx = (i * activated) / lut.size();
 	lut[i] = cdf[idx];
     }
     return lut;
@@ -57,17 +45,6 @@ std::array<double, 100> lut;
 void recalc_lut() {
     const auto& active = (A == render_state) ? rdSys.a : rdSys.b;
     lut = calc_lut<lut.size()>(active);
-}
-
-void reset_board() {
-    for(auto& c : img) c = colors[0];
-    rdSys = RDSys<size>(
-			0.005, .02, .1980,
-			.82, .084, .0061);
-    generation = 0;
-    for (unsigned int i = 0; i < lut.size(); i++) {
-	lut[i] = 10 * i / double(lut.size());
-    }
 }
 
 double lut_up(double v) {
@@ -80,6 +57,7 @@ double lut_up(double v) {
     assert( v <= *it );
 
     auto d = std::distance(lut.begin(), it);
+    // determine the fraction, to lerp
     double frac = 0.0;
     if ( (it+1) != lut.end()) {
 	double w = *it - v ;
@@ -95,6 +73,17 @@ double lut_up(double v) {
     return (double(d) + frac ) * lut_scale;
 }
 
+void reset_board() {
+    for(auto& c : img) c = 0x000000;
+    rdSys = RDSys<size>(
+			0.005, .02, .1980,
+			.82, .084, .0061);
+    generation = 0;
+    for (unsigned int i = 0; i < lut.size(); i++) {
+	lut[i] = 10 * i / double(lut.size());
+    }
+}
+
 void render() {
     const auto& active = (A == render_state) ? rdSys.a : rdSys.b;
 
@@ -104,7 +93,7 @@ void render() {
 
     int prev_line = (generation-1)%HEIGHT;
     for(int i = 0; i < WIDTH; i++)
-	img[prev_line * WIDTH + i] = colors[15];
+	img[prev_line * WIDTH + i] = 0xFFFF0000;
     
     // draw
     SDL_UpdateTexture(tex, NULL, img.data(), WIDTH * sizeof(uint32_t));
@@ -155,7 +144,6 @@ int main(int argc, char **argv) {
             if (e.type == SDL_QUIT || SDLK_q == e.key.keysym.sym) exit(0);
             if (SDLK_UP   == e.key.keysym.sym) generations_pr_frame  *= 2;
             if (SDLK_DOWN == e.key.keysym.sym) generations_pr_frame  /= 2;
-            if (SDLK_c    == e.key.keysym.sym) shuffle_colors();
 	    if (SDLK_a    == e.key.keysym.sym) render_state = A;
 	    if (SDLK_b    == e.key.keysym.sym) render_state = B;
             if (SDLK_k    == e.key.keysym.sym) {reset_board();}
